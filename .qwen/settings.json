@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(preview.themeforest.net)",
+      "WebSearch",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(mkdir *)",
+      "Bash(timeout *)",
+      "Bash(select-string *)",
+      "Bash(select-object *)",
+      "Bash(npx *)"
+    ]
+  },
+  "$version": 3
+}
