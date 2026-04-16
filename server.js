@@ -24,6 +24,31 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://osamamughal0072_db
 app.use(cors());
 app.use(express.json());
 
+function transformDoc(doc) {
+  if (!doc || typeof doc !== 'object') return doc;
+  if (Array.isArray(doc)) return doc.map(transformDoc);
+  const obj = { ...doc };
+  if (obj._id) {
+    obj.id = String(obj._id);
+    delete obj._id;
+  }
+  if (obj.__v !== undefined) delete obj.__v;
+  Object.keys(obj).forEach(key => {
+    if (obj[key] && typeof obj[key] === 'object' && obj[key]._id) {
+      obj[key] = transformDoc(obj[key]);
+    }
+  });
+  return obj;
+}
+
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = function (data) {
+    return originalJson(transformDoc(data));
+  };
+  next();
+});
+
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('MongoDB connection error:', err));
