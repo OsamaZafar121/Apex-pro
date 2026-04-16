@@ -106,6 +106,17 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Cannot book past dates' });
     }
 
+    const existingCustomer = await Customer.findOne({ email });
+    if (existingCustomer) {
+      const activeBooking = await Booking.findOne({
+        customerId: existingCustomer._id,
+        status: 'confirmed',
+      });
+      if (activeBooking) {
+        return res.status(400).json({ error: 'You already have an active booking. Please cancel it before booking a new service.' });
+      }
+    }
+
     const bookingSettings = await getBookingSettings();
 
     const existingBookings = await Booking.find({
