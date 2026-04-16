@@ -101,6 +101,11 @@ router.post('/', async (req, res) => {
     const dateStr = new Date(date).toISOString().split('T')[0];
     console.log('POST /api/bookings - Processing date:', dateStr);
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (dateStr < todayStr) {
+      return res.status(400).json({ error: 'Cannot book past dates' });
+    }
+
     const bookingSettings = await getBookingSettings();
 
     const existingBookings = await Booking.find({
