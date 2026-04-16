@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from './server/node_modules/@prisma/client/index.js';
+import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bookingRoutes from './server/src/routes/bookings.js';
@@ -18,18 +18,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const prisma = new PrismaClient({
-  log: ['error', 'warn'],
-});
 const PORT = process.env.PORT || 3001;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/apexpro';
 
 app.use(cors());
 app.use(express.json());
 
-app.use((req, res, next) => {
-  req.prisma = prisma;
-  next();
-});
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/customers', customerRoutes);
@@ -40,7 +37,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/contacts', contactRoutes);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
 });
 
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -64,13 +61,13 @@ server.on('error', (error) => {
 
 process.on('SIGINT', async () => {
   console.log('Shutting down...');
-  await prisma.$disconnect();
+  await mongoose.disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('Shutting down...');
-  await prisma.$disconnect();
+  await mongoose.disconnect();
   process.exit(0);
 });
 

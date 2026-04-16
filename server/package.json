@@ -10,7 +10,7 @@
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "dependencies": {
-    "@prisma/client": "^6.5.0",
+    "mongoose": "^8.13.2",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -21,7 +21,6 @@
   "devDependencies": {
     "cross-env": "^10.1.0",
     "jest": "^30.3.0",
-    "prisma": "^6.5.0",
     "supertest": "^7.2.2"
   }
 }

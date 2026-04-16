@@ -1,17 +1,20 @@
 import express from 'express';
 import { requireAdminAuth } from '../middleware/auth.js';
+import { Customer } from '../models/Customer.js';
+import { Booking } from '../models/Booking.js';
 
 const router = express.Router();
 
 router.get('/', requireAdminAuth, async (req, res) => {
   try {
-    const customers = await req.prisma.customer.findMany({
-      include: {
-        bookings: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json(customers);
+    const customers = await Customer.find().sort({ createdAt: -1 }).lean();
+    const customersWithBookings = await Promise.all(
+      customers.map(async (customer) => {
+        const bookings = await Booking.find({ customerId: customer._id }).lean();
+        return { ...customer, bookings };
+      })
+    );
+    res.json(customersWithBookings);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -20,14 +23,12 @@ router.get('/', requireAdminAuth, async (req, res) => {
 router.get('/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const customer = await req.prisma.customer.findUnique({
-      where: { id },
-      include: { bookings: true },
-    });
+    const customer = await Customer.findById(id).lean();
     if (!customer) {
       return res.status(404).json({ error: 'Customer not found' });
     }
-    res.json(customer);
+    const bookings = await Booking.find({ customerId: id }).lean();
+    res.json({ ...customer, bookings });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -37,12 +38,9 @@ router.put('/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, email, phone } = req.body;
-    
-    const customer = await req.prisma.customer.update({
-      where: { id },
-      data: { name, email, phone },
-    });
-    
+
+    const customer = await Customer.findByIdAndUpdate(id, { name, email, phone }, { new: true }).lean();
+
     res.json(customer);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -52,9 +50,8 @@ router.put('/:id', requireAdminAuth, async (req, res) => {
 router.delete('/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    await req.prisma.customer.delete({
-      where: { id },
-    });
+    await Customer.findByIdAndDelete(id);
+    await Booking.deleteMany({ customerId: id });
     res.json({ message: 'Customer deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });

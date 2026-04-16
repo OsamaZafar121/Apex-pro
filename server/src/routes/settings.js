@@ -1,8 +1,10 @@
 import express from 'express';
 import { requireAdminAuth } from '../middleware/auth.js';
+import { Settings } from '../models/Settings.js';
+import { Contact } from '../models/Contact.js';
 
 const router = express.Router();
-const PASSWORD_MASK = '••••••••';
+const PASSWORD_MASK = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
 
 const DEFAULT_SETTINGS = {
   emailEnabled: false,
@@ -31,7 +33,7 @@ function normalizeSettingValue(key, value) {
 
 router.get('/', requireAdminAuth, async (req, res) => {
   try {
-    const settings = await req.prisma.settings.findMany();
+    const settings = await Settings.find();
     const settingsObj = {};
 
     settings.forEach((setting) => {
@@ -70,11 +72,11 @@ router.put('/', requireAdminAuth, async (req, res) => {
         value = value ? 'true' : 'false';
       }
 
-      await req.prisma.settings.upsert({
-        where: { key },
-        update: { value: String(value) },
-        create: { key, value: String(value) },
-      });
+      await Settings.findOneAndUpdate(
+        { key },
+        { value: String(value) },
+        { upsert: true, new: true }
+      );
     }
 
     keys.forEach((key) => {
@@ -107,7 +109,7 @@ router.put('/', requireAdminAuth, async (req, res) => {
 
 router.get('/email', requireAdminAuth, async (req, res) => {
   try {
-    const settings = await req.prisma.settings.findMany();
+    const settings = await Settings.find();
     const settingsObj = {};
 
     settings.forEach((setting) => {

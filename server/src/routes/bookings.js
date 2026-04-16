@@ -3,6 +3,9 @@ import { sendBookingEmail } from '../utils/email.js';
 import { requireAdminAuth } from '../middleware/auth.js';
 import { DEFAULT_BUFFER_DAYS, getBufferDates, isBusinessDay } from '../../../shared/bookingRules.js';
 import { getServiceDefinition } from '../../../shared/services.js';
+import { Booking } from '../models/Booking.js';
+import { Customer } from '../models/Customer.js';
+import { Settings } from '../models/Settings.js';
 
 const router = express.Router();
 
@@ -15,13 +18,9 @@ function parseOptionalInt(value) {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-async function getBookingSettings(prisma) {
-  const settings = await prisma.settings.findMany({
-    where: {
-      key: {
-        in: ['bufferDays', 'emailEnabled', 'smtpHost', 'smtpPort', 'smtpEmail', 'smtpPassword', 'notificationEmail'],
-      },
-    },
+async function getBookingSettings() {
+  const settings = await Settings.find({
+    key: { $in: ['bufferDays', 'emailEnabled', 'smtpHost', 'smtpPort', 'smtpEmail', 'smtpPassword', 'notificationEmail'] },
   });
 
   return settings.reduce(
@@ -50,11 +49,14 @@ async function getBookingSettings(prisma) {
 
 router.get('/', async (req, res) => {
   try {
-    const bookings = await req.prisma.booking.findMany({
-      include: { customer: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json(bookings);
+    const bookings = await Booking.find().sort({ createdAt: -1 }).lean();
+    const bookingsWithCustomer = await Promise.all(
+      bookings.map(async (booking) => {
+        const customer = await Customer.findById(booking.customerId).lean();
+        return { ...booking, customer };
+      })
+    );
+    res.json(bookingsWithCustomer);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -64,20 +66,16 @@ router.get('/availability', async (req, res) => {
   try {
     const { date } = req.query;
     const dateStr = new Date(date).toISOString().split('T')[0];
-    const { bufferDays } = await getBookingSettings(req.prisma);
+    const bookingSettings = await getBookingSettings();
 
-    const bookings = await req.prisma.booking.findMany({
-      where: {
-        status: 'confirmed',
-      },
-    });
+    const bookings = await Booking.find({ status: 'confirmed' }).lean();
 
     const bookedTimes = bookings
       .filter((booking) => new Date(booking.date).toISOString().split('T')[0] === dateStr)
       .map((booking) => booking.time);
 
     const isBufferDay = bookings.some((booking) => {
-      const bufferDates = getBufferDates(booking.date, bufferDays);
+      const bufferDates = getBufferDates(booking.date, bookingSettings.bufferDays);
       return bufferDates.includes(dateStr);
     });
 
@@ -103,13 +101,11 @@ router.post('/', async (req, res) => {
     const dateStr = new Date(date).toISOString().split('T')[0];
     console.log('POST /api/bookings - Processing date:', dateStr);
 
-    const bookingSettings = await getBookingSettings(req.prisma);
+    const bookingSettings = await getBookingSettings();
 
-    const existingBookings = await req.prisma.booking.findMany({
-      where: {
-        status: 'confirmed',
-        date: dateStr,
-      },
+    const existingBookings = await Booking.find({
+      status: 'confirmed',
+      date: dateStr,
     });
 
     if (existingBookings.length > 0) {
@@ -117,9 +113,7 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ error: 'This date is already booked' });
     }
 
-    const allBookings = await req.prisma.booking.findMany({
-      where: { status: 'confirmed' },
-    });
+    const allBookings = await Booking.find({ status: 'confirmed' });
 
     const isBufferDay = allBookings.some((booking) => {
       const bufferDates = getBufferDates(booking.date, bookingSettings.bufferDays);
@@ -131,53 +125,48 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ error: 'Date is within buffer period' });
     }
 
-    let customer = await req.prisma.customer.findFirst({
-      where: { email },
-    });
+    let customer = await Customer.findOne({ email });
 
     if (customer) {
-      customer = await req.prisma.customer.update({
-        where: { id: customer.id },
-        data: {
-          totalBookings: { increment: 1 },
-          lastBooking: new Date(),
-        },
-      });
+      customer = await Customer.findByIdAndUpdate(
+        customer._id,
+        { totalBookings: customer.totalBookings + 1, lastBooking: new Date() },
+        { new: true }
+      ).lean();
     } else {
-      customer = await req.prisma.customer.create({
-        data: { name, email, phone },
-      });
+      customer = await Customer.create({ name, email, phone });
+      customer = customer.toObject();
     }
 
-    console.log('POST /api/bookings - Customer:', customer.id);
+    console.log('POST /api/bookings - Customer:', customer._id);
 
     const serviceData = getServiceDefinition(service);
 
-    const booking = await req.prisma.booking.create({
-      data: {
-        customerId: customer.id,
-        service,
-        date: dateStr,
-        time,
-        notes,
-        price: serviceData.price,
-        address,
-        bedrooms: parsedBedrooms,
-        bathrooms: parsedBathrooms,
-        status: 'confirmed',
-      },
-      include: { customer: true },
+    const booking = await Booking.create({
+      customerId: customer._id,
+      service,
+      date: dateStr,
+      time,
+      notes,
+      price: serviceData.price,
+      address,
+      bedrooms: parsedBedrooms,
+      bathrooms: parsedBathrooms,
+      status: 'confirmed',
     });
 
-    console.log('POST /api/bookings - Booking created:', booking.id);
+    const bookingObj = booking.toObject();
+    bookingObj.customer = customer;
+
+    console.log('POST /api/bookings - Booking created:', booking._id);
 
     try {
-      await sendBookingEmail(bookingSettings, booking);
+      await sendBookingEmail(bookingSettings, bookingObj);
     } catch (emailError) {
       console.error('Failed to send email:', emailError.message);
     }
 
-    res.json(booking);
+    res.json(bookingObj);
   } catch (error) {
     console.error('POST /api/bookings - Error:', error);
     console.error('POST /api/bookings - Stack:', error.stack);
@@ -190,17 +179,16 @@ router.put('/:id', requireAdminAuth, async (req, res) => {
     const { id } = req.params;
     const { status, notes, service, date, time } = req.body;
 
-    const booking = await req.prisma.booking.update({
-      where: { id },
-      data: {
-        ...(status && { status }),
-        ...(notes !== undefined && { notes }),
-        ...(service && { service }),
-        ...(date && { date: new Date(date).toISOString().split('T')[0] }),
-        ...(time && { time }),
-      },
-      include: { customer: true },
-    });
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (notes !== undefined) updateData.notes = notes;
+    if (service) updateData.service = service;
+    if (date) updateData.date = new Date(date).toISOString().split('T')[0];
+    if (time) updateData.time = time;
+
+    const booking = await Booking.findByIdAndUpdate(id, updateData, { new: true }).lean();
+    const customer = await Customer.findById(booking.customerId).lean();
+    booking.customer = customer;
 
     res.json(booking);
   } catch (error) {
@@ -211,10 +199,7 @@ router.put('/:id', requireAdminAuth, async (req, res) => {
 router.delete('/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    await req.prisma.booking.update({
-      where: { id },
-      data: { status: 'cancelled' },
-    });
+    await Booking.findByIdAndUpdate(id, { status: 'cancelled' });
     res.json({ message: 'Booking cancelled' });
   } catch (error) {
     res.status(500).json({ error: error.message });

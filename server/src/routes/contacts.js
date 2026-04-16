@@ -1,5 +1,7 @@
 import express from 'express';
 import { requireAdminAuth } from '../middleware/auth.js';
+import { Contact } from '../models/Contact.js';
+import { Settings } from '../models/Settings.js';
 
 const router = express.Router();
 
@@ -23,9 +25,7 @@ function buildStoredMessage({ service, address, message }) {
 
 router.get('/', requireAdminAuth, async (req, res) => {
   try {
-    const contacts = await req.prisma.contact.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+    const contacts = await Contact.find().sort({ createdAt: -1 });
     res.json(contacts);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -35,29 +35,26 @@ router.get('/', requireAdminAuth, async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { name, email, phone, service, address, message } = req.body;
-    
+
     if (!name || !email || !message) {
       return res.status(400).json({ error: 'Name, email, and message are required' });
     }
 
     const storedMessage = buildStoredMessage({ service, address, message });
 
-    const contact = await req.prisma.contact.create({
-      data: { name, email, phone, message: storedMessage },
-    });
+    const contact = await Contact.create({ name, email, phone, message: storedMessage });
 
-    // Send notification email
     try {
-      const settings = await req.prisma.settings.findMany();
+      const settings = await Settings.find();
       const settingsObj = {};
       settings.forEach(s => {
         if (s.key === 'emailEnabled') settingsObj[s.key] = s.value === 'true';
         else if (s.key === 'smtpPassword') settingsObj[s.key] = s.value;
         else settingsObj[s.key] = s.value;
       });
-      
+
       const { sendContactEmail } = await import('../utils/email.js');
-      await sendContactEmail(settingsObj, contact);
+      await sendContactEmail(settingsObj, contact.toObject());
     } catch (emailError) {
       console.error('Failed to send contact email:', emailError.message);
     }
@@ -71,7 +68,7 @@ router.post('/', async (req, res) => {
 router.delete('/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    await req.prisma.contact.delete({ where: { id } });
+    await Contact.findByIdAndDelete(id);
     res.json({ message: 'Contact deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
