@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/apexpro';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://osamamughal0072_db_user:wxIzitkh8wLb68nG@cluster0.odqbe2n.mongodb.net/';
 
 app.use(cors());
 app.use(express.json());
