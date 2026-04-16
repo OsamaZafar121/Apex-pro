@@ -18,7 +18,7 @@ const BookingEngine = () => {
   const { createBooking, isLoading, success, error, clearSuccess, clearError } = bookingContext;
 
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedService, setSelectedService] = useState(null);
+  const [selectedServices, setSelectedServices] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [step, setStep] = useState(1);
   const [showModal, setShowModal] = useState(false);
@@ -30,6 +30,8 @@ const BookingEngine = () => {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const totalPrice = selectedServices.reduce((sum, id) => sum + (SERVICES[id]?.price || 0), 0);
 
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
@@ -86,8 +88,16 @@ const BookingEngine = () => {
   const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
 
-  const handleServiceSelect = (serviceId) => {
-    setSelectedService(serviceId);
+  const handleServiceToggle = (serviceId) => {
+    setSelectedServices(prev =>
+      prev.includes(serviceId)
+        ? prev.filter(id => id !== serviceId)
+        : [...prev, serviceId]
+    );
+  };
+
+  const handleContinueToDate = () => {
+    if (selectedServices.length === 0) return;
     setStep(2);
   };
 
@@ -115,7 +125,7 @@ const BookingEngine = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -125,7 +135,7 @@ const BookingEngine = () => {
     clearError();
     const result = await createBooking({
       ...formData,
-      service: selectedService,
+      service: selectedServices.join(','),
       date: selectedDate.toISOString().split('T')[0],
       time: 'TBD',
     });
@@ -138,7 +148,7 @@ const BookingEngine = () => {
   };
 
   const resetBooking = () => {
-    setSelectedService(null);
+    setSelectedServices([]);
     setSelectedDate(null);
     setStep(1);
     setFormData({ name: '', email: '', phone: '', address: '', notes: '' });
@@ -150,8 +160,7 @@ const BookingEngine = () => {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  const currentService = selectedService ? SERVICES[selectedService] : null;
-  const ServiceIcon = currentService ? SERVICE_ICONS[selectedService] : FaHome;
+  const selectedServiceNames = selectedServices.map(id => SERVICES[id]?.name).filter(Boolean).join(', ');
 
   if (step === 4 && completedBooking) {
     return (
@@ -163,13 +172,13 @@ const BookingEngine = () => {
             </div>
             <h1 className="text-3xl font-bold text-[#1169a9] mb-4">Booking Confirmed!</h1>
             <p className="text-gray-600 mb-8">Thank you for your booking. We've sent a confirmation to your email.</p>
-            
+
             <div className="bg-blue-50 rounded-2xl p-6 text-left mb-8">
               <h3 className="font-bold text-gray-800 mb-4">Booking Details</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Service:</span>
-                  <span className="font-medium">{currentService?.name}</span>
+                  <span className="text-gray-600">Services:</span>
+                  <span className="font-medium">{selectedServiceNames}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Date:</span>
@@ -222,7 +231,7 @@ const BookingEngine = () => {
             Book Your Cleaning
           </h1>
           <p className="text-lg text-gray-600">
-            {step === 1 && 'Select a service to get started'}
+            {step === 1 && 'Select one or more services to get started'}
             {step === 2 && 'Choose the service date that works best for you'}
             {step === 3 && 'Complete your details and we will confirm the arrival time after booking'}
           </p>
@@ -260,37 +269,64 @@ const BookingEngine = () => {
 
         {/* Step 1: Service Selection */}
         {step === 1 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.values(SERVICES).map((service) => {
-              const Icon = SERVICE_ICONS[service.id] || FaHome;
-              const isSelected = selectedService === service.id;
-              return (
-                <div
-                  key={service.id}
-                  onClick={() => handleServiceSelect(service.id)}
-                  className={`bg-white rounded-2xl p-6 shadow-lg cursor-pointer transition-all hover:shadow-xl hover:transform hover:scale-105 ${
-                    isSelected ? 'ring-4 ring-[#1169a9]' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
-                      <Icon className="text-2xl text-[#1169a9]" />
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Object.values(SERVICES).map((service) => {
+                const Icon = SERVICE_ICONS[service.id] || FaHome;
+                const isSelected = selectedServices.includes(service.id);
+                return (
+                  <div
+                    key={service.id}
+                    onClick={() => handleServiceToggle(service.id)}
+                    className={`bg-white rounded-2xl p-6 shadow-lg cursor-pointer transition-all hover:shadow-xl hover:transform hover:scale-105 ${
+                      isSelected ? 'ring-4 ring-[#1169a9]' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center relative">
+                        <Icon className="text-2xl text-[#1169a9]" />
+                        {isSelected && (
+                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                            <FaCheck className="text-white text-xs" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-800">{service.name}</h3>
+                        <p className="text-gray-600 text-sm">{service.duration} min</p>
+                      </div>
+                      <div className="text-2xl font-bold text-[#1169a9]">${service.price}</div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-gray-800">{service.name}</h3>
-                      <p className="text-gray-600 text-sm">{service.duration} min</p>
-                    </div>
-                    <div className="text-2xl font-bold text-[#1169a9]">${service.price}</div>
                   </div>
+                );
+              })}
+            </div>
+
+            {selectedServices.length > 0 && (
+              <div className="mt-6 bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Selected: <span className="font-medium text-gray-800">{selectedServiceNames}</span></p>
+                    <p className="text-2xl font-bold text-[#1169a9] mt-1">Total: ${totalPrice}</p>
+                  </div>
+                  <button
+                    onClick={handleContinueToDate}
+                    className="px-8 py-3 bg-gradient-to-r from-[#1169a9] to-[#F08A7F] text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                  >
+                    Continue
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
         )}
 
         {/* Step 2: Date Selection */}
         {step === 2 && (
           <div className="bg-white rounded-3xl shadow-2xl p-6">
+            <div className="mb-4 p-3 bg-blue-50 rounded-xl text-sm text-gray-700">
+              <strong>Selected Services:</strong> {selectedServiceNames} — <strong>Total: ${totalPrice}</strong>
+            </div>
             <div className="flex items-center justify-between mb-6">
               <button onClick={handleBack} className="text-[#1169a9] font-medium hover:underline">
                 ← Back to Services
@@ -370,7 +406,7 @@ const BookingEngine = () => {
             <div className="bg-gradient-to-r from-[#1169a9] to-[#0f5a8f] px-6 py-4 flex-shrink-0">
               <h2 className="text-2xl font-bold text-white">Complete Your Booking</h2>
               <div className="flex items-center gap-4 mt-2 text-blue-200 text-sm">
-                <span>{currentService?.name}</span>
+                <span>{selectedServiceNames}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1"><FaCalendarAlt /> {formatDate(selectedDate)}</span>
               </div>
@@ -457,7 +493,7 @@ const BookingEngine = () => {
               <div className="bg-green-50 p-4 rounded-xl flex items-center gap-3">
                 <FaClipboardCheck className="text-green-600 text-xl" />
                 <div>
-                  <p className="font-medium text-green-800">Estimated Total: ${currentService?.price}</p>
+                  <p className="font-medium text-green-800">Estimated Total: ${totalPrice}</p>
                   <p className="text-sm text-green-600">Arrival time will be confirmed after your booking is reviewed.</p>
                 </div>
               </div>

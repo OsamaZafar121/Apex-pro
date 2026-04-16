@@ -145,7 +145,11 @@ router.post('/', async (req, res) => {
 
     console.log('POST /api/bookings - Customer:', customer._id);
 
-    const serviceData = getServiceDefinition(service);
+    const serviceIds = service.split(',').map(s => s.trim());
+    const totalPrice = serviceIds.reduce((sum, id) => {
+      const s = getServiceDefinition(id);
+      return sum + (s.price || 0);
+    }, 0);
 
     const booking = await Booking.create({
       customerId: customer._id,
@@ -153,7 +157,7 @@ router.post('/', async (req, res) => {
       date: dateStr,
       time,
       notes,
-      price: serviceData.price,
+      price: totalPrice,
       address,
       bedrooms: parsedBedrooms,
       bathrooms: parsedBathrooms,
