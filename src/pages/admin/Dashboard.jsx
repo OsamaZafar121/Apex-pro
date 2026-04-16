@@ -117,30 +117,30 @@ const AdminDashboard = () => {
         ]}
       />
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 xl:grid-cols-5">
         {mainSections.map((section) => (
           <Link
             key={section.title}
             to={section.to}
-            className="rounded-2xl bg-white p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg"
+            className="rounded-2xl bg-white p-3 sm:p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-gray-50">
                 {section.icon}
               </div>
               <span className="text-sm font-semibold text-gray-500">{section.value}</span>
             </div>
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">{section.title}</h3>
+            <h3 className="mt-3 sm:mt-4 text-sm sm:text-lg font-semibold text-gray-900">{section.title}</h3>
           </Link>
         ))}
       </section>
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-2xl bg-white shadow-md">
-          <div className="border-b border-gray-100 px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">Next Booking</h3>
+          <div className="border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Next Booking</h3>
           </div>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {dashboard.nextBooking ? (
               <div className="rounded-2xl bg-gray-50 p-5">
                 <p className="text-lg font-semibold text-gray-900">{getCustomerName(dashboard.nextBooking)}</p>
@@ -157,8 +157,8 @@ const AdminDashboard = () => {
         </div>
 
         <div className="rounded-2xl bg-white shadow-md">
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Bookings</h3>
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Recent Bookings</h3>
             <Link to="/admin/bookings" className="text-sm font-medium text-[#1169a9] hover:underline">
               View all
             </Link>

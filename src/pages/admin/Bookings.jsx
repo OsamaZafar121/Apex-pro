@@ -106,36 +106,36 @@ const AdminBookings = () => {
       />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl shadow-md p-4">
-          <p className="text-sm text-gray-600 mb-1">Total</p>
-          <p className="text-2xl font-bold text-[#1169a9]">{stats.total}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+        <div className="bg-white rounded-xl shadow-md p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-600 mb-1">Total</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#1169a9]">{stats.total}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-md p-4">
-          <p className="text-sm text-gray-600 mb-1">Confirmed</p>
-          <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
+        <div className="bg-white rounded-xl shadow-md p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-600 mb-1">Confirmed</p>
+          <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.confirmed}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-md p-4">
-          <p className="text-sm text-gray-600 mb-1">Pending</p>
-          <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+        <div className="bg-white rounded-xl shadow-md p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-600 mb-1">Pending</p>
+          <p className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.pending}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-md p-4">
-          <p className="text-sm text-gray-600 mb-1">Cancelled</p>
-          <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+        <div className="bg-white rounded-xl shadow-md p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-600 mb-1">Cancelled</p>
+          <p className="text-xl sm:text-2xl font-bold text-red-600">{stats.cancelled}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-md p-4">
-          <p className="text-sm text-gray-600 mb-1">Today</p>
-          <p className="text-2xl font-bold text-purple-600">{stats.today}</p>
+        <div className="bg-white rounded-xl shadow-md p-3 sm:p-4 col-span-2 sm:col-span-1">
+          <p className="text-xs sm:text-sm text-gray-600 mb-1">Today</p>
+          <p className="text-xl sm:text-2xl font-bold text-purple-600">{stats.today}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl shadow-md p-6">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6">
+        <div className="flex items-center gap-2 mb-3 sm:mb-4">
           <FaFilter className="text-gray-500" />
-          <h3 className="font-semibold text-gray-900">Filters & Search</h3>
+          <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Filters & Search</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <div className="lg:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
             <div className="relative">
@@ -193,8 +193,68 @@ const AdminBookings = () => {
         </div>
       </div>
 
-      {/* Bookings Table */}
-      <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+      {/* Bookings - Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {filteredBookings.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-md p-8 text-center text-gray-500">
+            <FaCalendarAlt className="text-4xl mx-auto mb-4 text-gray-400" />
+            <p className="text-lg">No bookings found</p>
+          </div>
+        ) : (
+          filteredBookings.map((booking) => {
+            const service = SERVICES[booking.service];
+            return (
+              <div key={booking.id} className="bg-white rounded-2xl shadow-md p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span
+                    className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      booking.status === 'confirmed'
+                        ? 'bg-green-100 text-green-800'
+                        : booking.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {booking.status}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Link
+                      to={`/admin/bookings/${booking.id}`}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                    >
+                      <FaEye className="text-sm" />
+                    </Link>
+                    <button
+                      onClick={() => { setSelectedBooking(booking); setNewStatus(booking.status); setShowStatusModal(booking.id); }}
+                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                    >
+                      <FaEdit className="text-sm" />
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(booking.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    >
+                      <FaTrash className="text-sm" />
+                    </button>
+                  </div>
+                </div>
+                <p className="font-medium text-gray-900 text-sm">{getCustomerName(booking)}</p>
+                <p className="text-xs text-gray-500">{getCustomerEmail(booking)}</p>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                  <div>
+                    <p className="text-xs text-gray-500">{formatDate(booking.date)}</p>
+                    <p className="text-xs text-gray-400">{service?.name || booking.service}</p>
+                  </div>
+                  {booking.price && <p className="font-bold text-[#1169a9]">${booking.price}</p>}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Bookings Table - Desktop */}
+      <div className="hidden md:block bg-white rounded-2xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gradient-to-r from-[#1169a9] to-[#0f5a8f] text-white">
