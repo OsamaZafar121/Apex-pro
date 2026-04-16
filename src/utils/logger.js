@@ -9,6 +9,8 @@ const LOG_LEVELS = {
 };
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+class Logger {
   constructor() {
     this.logQueue = [];
     this.isFlushing = false;
