@@ -8,7 +8,7 @@ const LOG_LEVELS = {
   ERROR: 'ERROR',
 };
 
-class Logger {
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
   constructor() {
     this.logQueue = [];
     this.isFlushing = false;
@@ -42,7 +42,7 @@ class Logger {
     this.logQueue = [];
 
     try {
-      await fetch('/api/logs', {
+      await fetch(`${API_BASE}/logs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logs: logsToFlush }),
@@ -94,7 +94,7 @@ class Logger {
         const blob = new Blob([JSON.stringify({ logs: logsToFlush })], {
           type: 'application/json',
         });
-        navigator.sendBeacon('/api/logs', blob);
+        navigator.sendBeacon(`${API_BASE}/logs`, blob);
       }
     }
   }
