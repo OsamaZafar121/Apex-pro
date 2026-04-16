@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from './server/node_modules/@prisma/client/index.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bookingRoutes from './server/src/routes/bookings.js';
@@ -20,7 +20,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const prisma = new PrismaClient({
   log: ['error', 'warn'],
-  datasourceUrl: process.env.DATABASE_URL || 'file:./server/prisma/dev.db',
 });
 const PORT = process.env.PORT || 3001;
 
