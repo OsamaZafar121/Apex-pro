@@ -20,6 +20,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const prisma = new PrismaClient({
   log: ['error', 'warn'],
+  datasourceUrl: process.env.DATABASE_URL || 'file:./server/prisma/dev.db',
 });
 const PORT = process.env.PORT || 3001;
 
