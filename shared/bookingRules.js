@@ -1,4 +1,4 @@
-export const DEFAULT_BUFFER_DAYS = 1;
+export const DEFAULT_BUFFER_DAYS = 2;
 
 export const TIME_SLOTS = [
   '08:00 AM',
